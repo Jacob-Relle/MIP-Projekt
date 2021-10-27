@@ -6,6 +6,7 @@ from cvxopt import matrix
 
 from Single_nuclei_segmentation import J_energy, Solv
 
+#create the subimages that will then be minimized
 def create_images(image, Omega, S):
     ListOfImages = []
     for k in range(len(S)):
@@ -16,6 +17,7 @@ def create_images(image, Omega, S):
         ListOfImages.append(sub_img)
     return ListOfImages
 
+#minimize the prototype sets. uses parallelization
 def optimise_fragments(ListOfImages):
     theta = []
     f = []
@@ -23,6 +25,7 @@ def optimise_fragments(ListOfImages):
     theta, f = zip(*r)
     return theta, f
 
+#Alg II
 def global_solution(f,alpha,Omega,S):
     #Set Variables we dont need Z but f_used
     n = len(S) 
@@ -86,6 +89,7 @@ def global_solution(f,alpha,Omega,S):
         Z -= {S[k_prim]}
     return u
 
+#compute segmented picture
 def multi_segmentation(image, fragments, PrototypeList, f, theta):
     alpha = np.median(f)
     u = global_solution(f, alpha, fragments, PrototypeList)
@@ -103,6 +107,7 @@ def multi_segmentation(image, fragments, PrototypeList, f, theta):
     s[s<0] = -1
     return s
 
+#old segmentation version, also doesn't work
 def segment_EV(image, Omega, Z, f, theta):
     alpha = np.median(f)
     u = global_solution(f, alpha, Omega, Z)

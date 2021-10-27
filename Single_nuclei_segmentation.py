@@ -56,9 +56,7 @@ def Solv(image):
 
 def segmented(image, theta,threshold):
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
-    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]
-                                
-                                *x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
+    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
     image[abs(s)<threshold] = 1
