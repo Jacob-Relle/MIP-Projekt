@@ -38,7 +38,7 @@ def J_energy(image):
         H = z[0]* SumMatrix * eta
         return J, DJ, H
     solv = solvers.cp(F)
-    return solv['x']
+    return solv['x'], solv['primal objective']
 
 def Solv(image):
     #Set solver options
@@ -48,15 +48,17 @@ def Solv(image):
     #try to solve minimizing Problem of Energie J with high accuracy
     try:
         solvers.options['feastol'] = 1e-7
-        theta = J_energy(image)
+        theta, f = J_energy(image)
     except:
         solvers.options['feastol'] = 1e-2
-        theta = J_energy(image)
-    return theta
+        theta, f = J_energy(image)
+    return theta, f
 
 def segmented(image, theta,threshold):
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
-    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
+    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]
+                                
+                                *x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
     image[abs(s)<threshold] = 1
@@ -65,7 +67,7 @@ def segmented(image, theta,threshold):
 def main(path_to_data):
 
     image = plt.imread(path_to_data)[...,0]
-    theta = Solv(image)
+    theta = Solv(image)[0]
     segmentation = segmented(image,theta,20)
     plt.imshow(segmentation)
     plt.colorbar()
