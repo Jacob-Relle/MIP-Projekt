@@ -6,10 +6,10 @@ from skimage import filters
 
 from cvxopt import solvers, matrix, div, exp, mul, log
 
-def J_energy(image, coords):
+def J_energy(image):
 
     #The coordinates of the image
-    #coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
+    coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     #define tau
     tau = filters.threshold_otsu(image)
     #define y_x for every element in the region
@@ -42,7 +42,7 @@ def J_energy(image, coords):
     solv = solvers.cp(F)
     return solv['x'], solv['primal objective']
 
-def Solv(image, coords):
+def Solv(image):
     #Set solver options
     solvers.options['show_progress'] = False
     #Initalize model parameter theta
@@ -50,10 +50,10 @@ def Solv(image, coords):
     #try to solve minimizing Problem of Energie J with high accuracy
     try:
         solvers.options['feastol'] = 1e-7
-        theta, f = J_energy(image, coords)
+        theta, f = J_energy(image)
     except:
         solvers.options['feastol'] = 1e-2
-        theta, f = J_energy(image, coords)
+        theta, f = J_energy(image)
     return theta, f
 
 def segmented(image, theta,threshold):
@@ -62,10 +62,7 @@ def segmented(image, theta,threshold):
                      ,(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
-    image = np.concatenate((image,image,image),axis=2)
-    image[...,0][abs(s)<threshold] = 0
-    image[...,1][abs(s)<threshold] = 1
-    image[...,2][abs(s)<threshold] = 0
+    image[abs(s)<threshold] = 1
     return image
 
 def main(path_to_data):

@@ -8,17 +8,21 @@ from Single_nuclei_segmentation import J_energy, Solv
 
 #create the subimages that will then be minimized
 def create_images(image, Omega, S):
-    ListOfCoords = []
+    ListOfImages = []
     for k in range(len(S)):
-        coords = np.concatenate([regionprops(Omega)[i-1].coords for i in list(S[k])])
-        ListOfCoords.append(coords)
-    return ListOfCoords
+        ListOfRegions = [regionprops(Omega)[i-1] for i in list(S[k])]
+        sub_img = np.zeros_like(image)
+        for reg in ListOfRegions:
+            for x in reg.coords:
+                sub_img[x[0]][x[1]] = image[x[0]][x[1]]
+        ListOfImages.append(sub_img)
+    return ListOfImages
 
 #minimize the prototype sets. uses parallelization
-def optimise_fragments(image, ListOfCoords):
+def optimise_fragments(ListOfImages):
     theta = []
     f = []
-    r = Parallel(n_jobs = -2, verbose = 10)(delayed(Solv)(image, coords) for coords in ListOfCoords)
+    r = Parallel(n_jobs = -2, verbose = 10)(delayed(Solv)(image) for image in ListOfImages)
     theta, f = zip(*r)
     return theta, f
 
