@@ -59,7 +59,10 @@ def segmented(image, theta,threshold):
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
-    image[abs(s)<threshold] = 1
+    image = np.concatenate((image,image,image),axis=2)
+    image[...,0][abs(s)<threshold] = 0
+    image[...,1][abs(s)<threshold] = 1
+    image[...,2][abs(s)<threshold] = 0
     return image
 
 def main(path_to_data):
