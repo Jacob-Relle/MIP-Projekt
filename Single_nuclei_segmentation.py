@@ -6,16 +6,18 @@ from skimage import filters
 
 from cvxopt import solvers, matrix, div, exp, mul, log
 
-def J_energy(image):
+def J_energy(image, coords):
 
     #The coordinates of the image
-    coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
+    #coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     #define tau
     tau = filters.threshold_otsu(image)
     #define y_x for every element in the region
-    y = matrix(np.array([image[x[0], x[1]] - tau for x in coords],dtype=np.double),(len(coords),1))
+    y = matrix(np.array([image[x[0], x[1]] - tau for x in coords],dtype=np.double)
+               ,(len(coords),1))
     #define nable s(x) for each element
-    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]), (len(coords), 6))
+    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords])
+                     ,(len(coords), 6))
     def F(theta = None, z = None):
         # choose starting point and as such define dimension of theta
         if theta is None: return 0, matrix(0.0, (6,1))
@@ -40,7 +42,7 @@ def J_energy(image):
     solv = solvers.cp(F)
     return solv['x'], solv['primal objective']
 
-def Solv(image):
+def Solv(image, coords):
     #Set solver options
     solvers.options['show_progress'] = False
     #Initalize model parameter theta
@@ -48,15 +50,16 @@ def Solv(image):
     #try to solve minimizing Problem of Energie J with high accuracy
     try:
         solvers.options['feastol'] = 1e-7
-        theta, f = J_energy(image)
+        theta, f = J_energy(image, coords)
     except:
         solvers.options['feastol'] = 1e-2
-        theta, f = J_energy(image)
+        theta, f = J_energy(image, coords)
     return theta, f
 
 def segmented(image, theta,threshold):
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
-    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
+    delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords])
+                     ,(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
     image[abs(s)<threshold] = 1
@@ -65,7 +68,8 @@ def segmented(image, theta,threshold):
 def main(path_to_data):
 
     image = plt.imread(path_to_data)[...,0]
-    theta = Solv(image)[0]
+    coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
+    theta = Solv(image, coords)[0]
     segmentation = segmented(image,theta,20)
     plt.imshow(segmentation)
     plt.colorbar()

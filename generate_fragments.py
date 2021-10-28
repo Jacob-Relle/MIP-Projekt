@@ -49,7 +49,7 @@ def generate_fragments(img,std_dev,int_threshold,min_seed_dist,max_search_depth,
 
     #Remove edges if centroids are to far away
     for edge in G.edges():
-        if np.linalg.norm(np.array(PI[edge[0]-1].centroid) - np.array(PI[edge[1]-1].centroid)) > max_frag_dist:
+        if np.linalg.norm(np.array(PI[edge[0]-1].centroid) - np.array(PI[edge[1]-1].centroid)) >= max_frag_dist:
             G.remove_edge(edge[0],edge[1])
 
     S = set()

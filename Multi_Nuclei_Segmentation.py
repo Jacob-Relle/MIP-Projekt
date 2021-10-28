@@ -8,20 +8,17 @@ from Single_nuclei_segmentation import J_energy, Solv
 
 #create the subimages that will then be minimized
 def create_images(image, Omega, S):
-    ListOfImages = []
+    ListOfCoords = []
     for k in range(len(S)):
-        ListOfRegions = [regionprops(Omega)[i-1] for i in list(S[k])]
-        bboxes = np.array([region.bbox for region in ListOfRegions])
-        bbox = (min(bboxes[:,0]), max(bboxes[:,2]), min(bboxes[:,1]),  max(bboxes[:,3]))
-        sub_img = image[bbox[0]:bbox[1], bbox[2]:bbox[3]]
-        ListOfImages.append(sub_img)
-    return ListOfImages
+        coords = np.concatenate([regionprops(Omega)[i-1].coords for i in list(S[k])])
+        ListOfCoords.append(coords)
+    return ListOfCoords
 
 #minimize the prototype sets. uses parallelization
-def optimise_fragments(ListOfImages):
+def optimise_fragments(image, ListOfCoords):
     theta = []
     f = []
-    r = Parallel(n_jobs = -3, verbose = 10)(delayed(Solv)(image) for image in ListOfImages)
+    r = Parallel(n_jobs = -2, verbose = 10)(delayed(Solv)(image, coords) for coords in ListOfCoords)
     theta, f = zip(*r)
     return theta, f
 
@@ -90,8 +87,7 @@ def global_solution(f,alpha,Omega,S):
     return u
 
 #compute segmented picture
-def multi_segmentation(image, fragments, PrototypeList, f, theta):
-    alpha = np.median(f)
+def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
     u = global_solution(f, alpha, fragments, PrototypeList)
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
@@ -108,8 +104,7 @@ def multi_segmentation(image, fragments, PrototypeList, f, theta):
     return s
 
 #old segmentation version, also doesn't work
-def segment_EV(image, Omega, Z, f, theta):
-    alpha = np.median(f)
+def segment_EV(image, Omega, Z, f, alpha, theta):
     u = global_solution(f, alpha, Omega, Z)
     segmentation = np.zeros_like(image)
     for k in range(len(u)):
