@@ -4,7 +4,7 @@ from scipy.ndimage.filters import gaussian_filter
 
 from skimage import filters
 
-from cvxopt import solvers, matrix, div, exp, mul, log
+from cvxopt import solvers, matrix, spmatrix, div, exp, mul, log
 
 def J_energy(image, coords):
 
@@ -20,14 +20,18 @@ def J_energy(image, coords):
                      ,(len(coords), 6))
     def F(theta = None, z = None):
         # choose starting point and as such define dimension of theta
-        if theta is None: return 0, matrix(0.0, (6,1))
+        if theta is None: return 1, matrix(0.0, (6,1))
         # s contains region.area many rows, each row contains a scalar.
         s = delta_s * theta
         phi = log(1 + exp(-mul(y,s)))
         J = sum(phi)
         kappa = div(1, 1+exp(mul(y,s)))
         DJ = matrix(1, (1, len(coords))) * (-mul(mul(y, kappa) * matrix(1, (1, 6)), delta_s))
-        if z is None: return J, DJ
+        f_2 = (2*theta[2])**2-4*theta[0]*theta[1]
+        Df_2 = matrix([-4*theta[1],-4*theta[0],4*theta[2],0,0,0],(1,6))
+        f = matrix([J,f_2],(2,1))        
+        Df = matrix([DJ,Df_2],(2,6))
+        if z is None: return f, Df
         nu = mul(y**2, kappa - kappa**2)
         #define matrix to multiply from the right for summation
         SumMatrix = matrix(np.tile([[1,0,0,0,0,0], 
@@ -37,8 +41,9 @@ def J_energy(image, coords):
                                     [0,0,0,0,1,0], 
                                     [0,0,0,0,0,1]], len(coords)))
         eta = matrix([delta_s[i,:].T * delta_s[i,:] * nu[i] for i in range(len(coords))])
-        H = z[0]* SumMatrix * eta
-        return J, DJ, H
+        D2_f_2 = spmatrix([-4,-4,4],[1,0,2],[0,1,2],(6,6))
+        H = z[0]* SumMatrix * eta + z[1]* D2_f_2
+        return f, Df, H
     solv = solvers.cp(F)
     return solv['x'], solv['primal objective']
 
@@ -62,10 +67,12 @@ def segmented(image, theta,threshold):
                      ,(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
+    s = s*(s-threshold)
+    image = image[...,np.newaxis]
     image = np.concatenate((image,image,image),axis=2)
-    image[...,0][abs(s)<threshold] = 0
-    image[...,1][abs(s)<threshold] = 1
-    image[...,2][abs(s)<threshold] = 0
+    image[...,0][s<=0] = 0
+    image[...,1][s<=0] = 1
+    image[...,2][s<=0] = 0
     return image
 
 def main(path_to_data):

@@ -1,13 +1,12 @@
 import numpy as np
 from skimage.measure import regionprops
 from joblib import Parallel, delayed
-from tqdm import tqdm
 from cvxopt import matrix
 
-from Single_nuclei_segmentation import J_energy, Solv
+from Single_nuclei_segmentation import Solv
 
 #create the subimages that will then be minimized
-def create_images(image, Omega, S):
+def create_images(Omega, S):
     ListOfCoords = []
     for k in range(len(S)):
         coords = np.concatenate([regionprops(Omega)[i-1].coords for i in list(S[k])])
@@ -99,8 +98,16 @@ def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
             except:
                 s = s_k
     s = np.reshape(s,image.shape)
-    s[s>0] = 1
-    s[s<0] = -1
+    s[s>0]= 1
+    s[s<0]= -1
+    '''
+    s = s*(s-100)
+    image = image[...,np.newaxis]
+    image = np.concatenate((image,image,image),axis=2)
+    image[...,0][s<=0] = 0
+    image[...,1][s<=0] = 1
+    image[...,2][s<=0] = 0
+    '''
     return s
 
 #old segmentation version, also doesn't work
