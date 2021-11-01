@@ -13,11 +13,6 @@ from skimage.future.graph import RAG
 from tqdm import tqdm
 
 def generate_fragments(img,std_dev,int_threshold,min_seed_dist,max_search_depth,max_frag_dist, background = 0):
-    img = img_as_ubyte(img)
-    #smooth image with gausian filter
-    g = gaussian_filter(img,std_dev)
-    #flatten the lower background percentile of the gaussian filter to 0 (for background)
-    g[g < np.percentile(g, background)] = 0
     
     #Fehlerabfangen
     if std_dev < 0:
@@ -32,7 +27,14 @@ def generate_fragments(img,std_dev,int_threshold,min_seed_dist,max_search_depth,
         raise ValueError("maximum fragments distance needs zo be positive")
     if background > 100 or background < 0:
         raise ValueError('background is a percentage value between 0 and 100')
-        
+    
+    
+    img = img_as_ubyte(img)
+    #smooth image with gausian filter
+    g = gaussian_filter(img,std_dev)
+    #flatten the lower background percentile of the gaussian filter to 0 (for background)
+    g[g < np.percentile(g, background)] = 0        
+    
     #Create Delta Ball
     B = disk(min_seed_dist)
     #Set the markers in the Image according to the formula (P is an image)
@@ -43,13 +45,13 @@ def generate_fragments(img,std_dev,int_threshold,min_seed_dist,max_search_depth,
     PI = regionprops(g_markers)
 
     #Create Watershed regions
-    Omega = watershed(util.invert(g),markers=g_markers)
+    Omega = watershed(255-g,markers=g_markers)
     #Create the adjacency graph of the labeled image
     G = RAG(Omega,connectivity=2)
 
     #Remove edges if centroids are to far away
     for edge in G.edges():
-        if np.linalg.norm(np.array(PI[edge[0]-1].centroid) - np.array(PI[edge[1]-1].centroid)) >= max_frag_dist:
+        if np.linalg.norm(np.array(PI[edge[0]-1].centroid) - np.array(PI[edge[1]-1].centroid)) > max_frag_dist:
             G.remove_edge(edge[0],edge[1])
 
     S = set()

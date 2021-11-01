@@ -49,6 +49,8 @@ def global_solution(f,alpha,Omega,S):
             else:
                 c[k] = np.nan
         #Get the argmin of c
+        if np.nanmin(c)==np.inf:
+            break
         k_min = np.nanargmin(c)
         #Set u of argmin to 1
         u[k_min] = 1 
@@ -57,6 +59,8 @@ def global_solution(f,alpha,Omega,S):
     
     #Second loop over not used elements of f
     while Z != set():
+        if np.nanmin(f_used) == np.inf:
+            break
         #Set current element of interest k_prim
         k_prim = np.nanargmin(f_used)
         #check if u[_k_prim hasnt been used in first loop
@@ -98,17 +102,15 @@ def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
             except:
                 s = s_k
     s = np.reshape(s,image.shape)
-    s[s>0]= 1
-    s[s<0]= -1
-    '''
-    s = s*(s-100)
+
+    s = s*(s-50)
     image = image[...,np.newaxis]
     image = np.concatenate((image,image,image),axis=2)
     image[...,0][s<=0] = 0
     image[...,1][s<=0] = 1
     image[...,2][s<=0] = 0
-    '''
-    return s
+
+    return image
 
 #old segmentation version, also doesn't work
 def segment_EV(image, Omega, Z, f, alpha, theta):
