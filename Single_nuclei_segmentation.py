@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage.filters import gaussian_filter
 
 from skimage import filters
 
@@ -20,17 +19,25 @@ def J_energy(image, coords):
                      ,(len(coords), 6))
     def F(theta = None, z = None):
         # choose starting point and as such define dimension of theta
-        if theta is None: return 1, matrix(0.0, (6,1))
-        # s contains region.area many rows, each row contains a scalar.
+        if theta is None: return 3, matrix(0.0, (6,1))
+        # define main objective 'minimize Energie J'
         s = delta_s * theta
         phi = log(1 + exp(-mul(y,s)))
-        J = sum(phi)
+        J = sum(phi) 
         kappa = div(1, 1+exp(mul(y,s)))
+        #define the derivativ of the Energie J
         DJ = matrix(1, (1, len(coords))) * (-mul(mul(y, kappa) * matrix(1, (1, 6)), delta_s))
-        f_2 = (2*theta[2])**2-4*theta[0]*theta[1]
-        Df_2 = matrix([-4*theta[1],-4*theta[0],4*theta[2],0,0,0],(1,6))
-        f = matrix([J,f_2],(2,1))        
-        Df = matrix([DJ,Df_2],(2,6))
+        #Define the first constraint 2*A_3^2-4*A_1*A_2 <= 0 to ensure the result is an ellipse
+        f_1 = 4*theta[2]**2 - (4*theta[0]*theta[1])
+        Df_1 = matrix([-4*theta[1],-4*theta[0],8*theta[2],0,0,0],(1,6))
+        #define the second constraint that A_1 and A_2 have negativ sign
+        f_2 = theta[0]
+        f_3 = theta[1]
+        Df_2 = matrix([1,0,0,0,0,0],(1,6))
+        Df_3 = matrix([0,1,0,0,0,0],(1,6))
+        #combine constraints
+        f = matrix([J,f_1,f_2,f_3],(4,1))
+        Df = matrix([DJ,Df_1,Df_2,Df_3],(4,6))
         if z is None: return f, Df
         nu = mul(y**2, kappa - kappa**2)
         #define matrix to multiply from the right for summation
@@ -41,8 +48,8 @@ def J_energy(image, coords):
                                     [0,0,0,0,1,0], 
                                     [0,0,0,0,0,1]], len(coords)))
         eta = matrix([delta_s[i,:].T * delta_s[i,:] * nu[i] for i in range(len(coords))])
-        D2_f_2 = spmatrix([-4,-4,4],[1,0,2],[0,1,2],(6,6))
-        H = z[0]* SumMatrix * eta + z[1]* D2_f_2
+        H_1 = spmatrix([-4,-4,8],[1,0,2],[0,1,2],(6,6))
+        H = z[0]*SumMatrix*eta + z[1]* H_1 
         return f, Df, H
     solv = solvers.cp(F)
     return solv['x'], solv['primal objective']
@@ -57,11 +64,20 @@ def Solv(image, coords):
         solvers.options['feastol'] = 1e-7
         theta, f = J_energy(image, coords)
     except:
-        solvers.options['feastol'] = 1e-2
-        theta, f = J_energy(image, coords)
+        try:
+            solvers.options['feastol'] = 1e-2
+            theta, f = J_energy(image, coords)
+        except:
+            theta = matrix(-1*np.ones(6),(6,1))
+            f = np.inf        
+    #if the result is a parbola set the energie to inf 
+    if (2*theta[2])**2-4*theta[0]*theta[1] >= -1e-10 and theta[0] != 0:
+        theta = matrix(-1*np.ones(6),(6,1))
+        f = np.inf  
+
     return theta, f
 
-def segmented(image, theta,threshold):
+def segmented(image, theta, threshold):
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords])
                      ,(len(coords),6))
@@ -84,7 +100,5 @@ def main(path_to_data):
     plt.imshow(segmentation)
     plt.colorbar()
     plt.show()
-    
-if __name__ == '__main__' :
-    path = 'dna-0.png'
-    main(path)
+
+

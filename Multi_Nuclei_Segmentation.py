@@ -1,5 +1,5 @@
 import numpy as np
-from skimage.measure import regionprops
+from skimage.measure import regionprops, find_contours
 from joblib import Parallel, delayed
 from cvxopt import matrix
 
@@ -49,6 +49,8 @@ def global_solution(f,alpha,Omega,S):
             else:
                 c[k] = np.nan
         #Get the argmin of c
+        if np.nanmin(c)==np.inf:
+            break
         k_min = np.nanargmin(c)
         #Set u of argmin to 1
         u[k_min] = 1 
@@ -57,6 +59,8 @@ def global_solution(f,alpha,Omega,S):
     
     #Second loop over not used elements of f
     while Z != set():
+        if np.nanmin(f_used) == np.inf:
+            break
         #Set current element of interest k_prim
         k_prim = np.nanargmin(f_used)
         #check if u[_k_prim hasnt been used in first loop
@@ -90,7 +94,17 @@ def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
     u = global_solution(f, alpha, fragments, PrototypeList)
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))
+    ListOfContours = []
     for k in range(len(u)):
+        if u[k]==1:
+            s = delta_s * theta[k]
+            s = np.reshape(s,image.shape)
+            s[s>0]=  1
+            s[s<0]= -1
+            ListOfContours.append(find_contours(s))
+
+    #old contour
+    '''
         if u[k]==1:
             s_k = delta_s * theta[k]
             try:
@@ -98,17 +112,19 @@ def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
             except:
                 s = s_k
     s = np.reshape(s,image.shape)
-    s[s>0]= 1
+    s[s>0]=  1
     s[s<0]= -1
-    '''
-    s = s*(s-100)
+    
+    ListOfContours = find_contours(s)
+    
     image = image[...,np.newaxis]
     image = np.concatenate((image,image,image),axis=2)
-    image[...,0][s<=0] = 0
-    image[...,1][s<=0] = 1
-    image[...,2][s<=0] = 0
+    for contour in ListOfContours:
+        image[...,0][contour] = 0
+        image[...,1][contour] = 1
+        image[...,2][contour] = 0
     '''
-    return s
+    return ListOfContours
 
 #old segmentation version, also doesn't work
 def segment_EV(image, Omega, Z, f, alpha, theta):
