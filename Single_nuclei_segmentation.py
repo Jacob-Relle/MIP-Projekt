@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from skimage import filters
-
 from cvxopt import solvers, matrix, spmatrix, div, exp, mul, log
 
 def J_energy(image, coords):

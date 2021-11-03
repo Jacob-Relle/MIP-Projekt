@@ -125,28 +125,3 @@ def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
         image[...,2][contour] = 0
     '''
     return ListOfContours
-
-#old segmentation version, also doesn't work
-def segment_EV(image, Omega, Z, f, alpha, theta):
-    u = global_solution(f, alpha, Omega, Z)
-    segmentation = np.zeros_like(image)
-    for k in range(len(u)):
-        if u[k]==1:
-            regions = []
-            for i in Z[k]:
-                regions.append(regionprops(Omega)[i-1])
-                n = len(regions)
-                area = 0
-                sub_img = np.zeros_like(Omega, dtype = bool)
-                for reg in regions:
-                    area += reg.area
-                    sub_img += Omega == reg.label
-                coords = regions[0].coords
-                for i in range(1, n):
-                      coords = np.append(coords, regions[i].coords, axis = 0)
-                delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]), (area, 6))
-                s = delta_s * theta[k]
-                for i,pixel in enumerate(coords ,start= 0):
-                      if s[i]>=0:
-                            segmentation[pixel[0],pixel[1]] = 1
-    return segmentation
