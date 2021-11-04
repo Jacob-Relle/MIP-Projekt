@@ -6,39 +6,58 @@ from cvxopt import matrix
 from Single_nuclei_segmentation import Solv
 
 #create the subimages that will then be minimized
-def create_images(Omega, S):
+def create_images(fragments, PrototypeList):
     ListOfCoords = []
-    for k in range(len(S)):
-        coords = np.concatenate([regionprops(Omega)[i-1].coords for i in list(S[k])])
+    for k in range(len(PrototypeList)):
+        coords = np.concatenate([regionprops(fragments)[i-1].coords for i in list(PrototypeList[k])])
         ListOfCoords.append(coords)
     return ListOfCoords
 
 #minimize the prototype sets. uses parallelization
-def optimise_fragments(image, ListOfCoords):
+def optimise_regions(image, ListOfCoords):
+    """
+    Find all minimisers and minimum value of energy function for each region of image given by ListOfCoords.
+
+    Input
+    -----
+    image: 2d-ndarray or matrix
+        Image for which we compute minimum energy
+
+    ListOfCoords: list of lists
+        each element is a list of int tuples (x, y) of pixel-coordinates in image
+
+    Result
+    ------
+    (theta, f)
+        theta: list of CVX 6x1 matrix of length ListOfCoords
+            TODO
+        f: list of floats of length ListOfCoords
+            TODO
+    """
     theta = []
     f = []
-    r = Parallel(n_jobs = -2, verbose = 10)(delayed(Solv)(image, coords) for coords in ListOfCoords)
+    r = Parallel(n_jobs = -3, verbose = 10)(delayed(Solv)(image, coords) for coords in ListOfCoords)
     theta, f = zip(*r)
     return theta, f
 
 #Alg II
-def global_solution(f,alpha,Omega,S):
+def global_solution(f,alpha,fragments,PrototypeList):
     #Set Variables we dont need Z but f_used
-    n = len(S) 
+    n = len(PrototypeList) 
     u = np.zeros(n)
     V = set()
-    Z = set(S)
+    Z = set(PrototypeList)
     f_used = np.copy(f)
-    regions = regionprops(Omega)
-    #First Loop over copy of Omega
-    for Zk in S:
+    regions = regionprops(fragments)
+    #First Loop over copy of fragments
+    for Zk in PrototypeList:
         V = V.union(Zk)
     while V != set():
         c = np.zeros(n)
-        #Loop over number of Subgraphs in S
+        #Loop over number of Subgraphs in PrototypeList
         for k in range(n):
             #Set intersection length
-            Zk_V_labels = V.intersection(set(S[k]))
+            Zk_V_labels = V.intersection(set(PrototypeList[k]))
             Zk_V_area = 0
             for label in Zk_V_labels:
                 Zk_V_area += regions[label-1].area
@@ -55,7 +74,7 @@ def global_solution(f,alpha,Omega,S):
         #Set u of argmin to 1
         u[k_min] = 1 
         #Remove the nodes of Z_k
-        V -= S[k_min]
+        V -= PrototypeList[k_min]
     
     #Second loop over not used elements of f
     while Z != set():
@@ -70,15 +89,15 @@ def global_solution(f,alpha,Omega,S):
             #loop over all elements of u that are non zero
             for ind in np.nonzero(u)[0]:
                 #check if Z_ind is subset of Z_kprim
-                if not S[ind].issubset(S[k_prim]):
+                if not PrototypeList[ind].issubset(PrototypeList[k_prim]):
                     #if not set v to 0 to ignore it in the union
                     v[ind] = 0
             #check if union of all left subsets is equal to Z_kprim
             union = set()
             for k in np.nonzero(v)[0]:
-                for label in S[k]:
+                for label in PrototypeList[k]:
                     union.add(label)
-            if set(S[k_prim]) == union:
+            if set(PrototypeList[k_prim]) == union:
                 #check smth...
                 if f[k_prim]+alpha < np.dot(v,f + (alpha*np.ones(n))):
                     #Set u values of the used subsets to 0 and the union to 1
@@ -86,7 +105,7 @@ def global_solution(f,alpha,Omega,S):
                     u[k_prim] = 1
         #make f equal to nan for the used region
         f_used[k_prim] = np.nan
-        Z -= {S[k_prim]}
+        Z -= {PrototypeList[k_prim]}
     return u
 
 #compute segmented picture
@@ -97,31 +116,9 @@ def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
     ListOfContours = []
     for k in range(len(u)):
         if u[k]==1:
-            s = delta_s * theta[k]
-            s = np.reshape(s,image.shape)
-            s[s>0]=  1
-            s[s<0]= -1
-            ListOfContours.append(find_contours(s))
-
-    #old contour
-    '''
-        if u[k]==1:
-            s_k = delta_s * theta[k]
-            try:
-                s = np.maximum(s,s_k)
-            except:
-                s = s_k
-    s = np.reshape(s,image.shape)
-    s[s>0]=  1
-    s[s<0]= -1
-    
-    ListOfContours = find_contours(s)
-    
-    image = image[...,np.newaxis]
-    image = np.concatenate((image,image,image),axis=2)
-    for contour in ListOfContours:
-        image[...,0][contour] = 0
-        image[...,1][contour] = 1
-        image[...,2][contour] = 0
-    '''
+            PrototypeList = delta_s * theta[k]
+            PrototypeList = np.reshape(PrototypeList,image.shape)
+            PrototypeList[PrototypeList>0]=  1
+            PrototypeList[PrototypeList<0]= -1
+            ListOfContours.append(find_contours(PrototypeList))
     return ListOfContours

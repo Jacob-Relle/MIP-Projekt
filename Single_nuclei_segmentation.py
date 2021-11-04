@@ -5,9 +5,6 @@ from skimage import filters
 from cvxopt import solvers, matrix, spmatrix, div, exp, mul, log
 
 def J_energy(image, coords):
-
-    #The coordinates of the image
-    #coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     #define tau
     tau = filters.threshold_otsu(image)
     #define y_x for every element in the region
@@ -27,7 +24,7 @@ def J_energy(image, coords):
         #define the derivativ of the Energie J
         DJ = matrix(1, (1, len(coords))) * (-mul(mul(y, kappa) * matrix(1, (1, 6)), delta_s))
         #Define the first constraint 2*A_3^2-4*A_1*A_2 <= 0 to ensure the result is an ellipse
-        f_1 = 4*theta[2]**2 - (4*theta[0]*theta[1])
+        f_1 = 4*theta[2]**2 - (4*theta[0]*theta[1]) -1e-10
         Df_1 = matrix([-4*theta[1],-4*theta[0],8*theta[2],0,0,0],(1,6))
         #define the second constraint that A_1 and A_2 have negativ sign
         f_2 = theta[0]
@@ -54,6 +51,26 @@ def J_energy(image, coords):
     return solv['x'], solv['primal objective']
 
 def Solv(image, coords):
+    """
+    Minimize the energy ENTER FUNCTION of image for region defined by coords.
+
+    Parameters
+    ----------
+    image: 2d-ndarray or matrix
+        Image for which we compute minimum energy
+    coords: list of int tuples.
+        Each element of coords is a tuple (x, y) of pixel-coordinates in image.
+
+    Return
+    ------
+    (theta, f)
+        theta: a CVX 6x1 matrix of type double 
+            minimizer of the function J. 
+        
+        f: float
+             value J takes at theta, and as such the minimum  
+    """
+
     #Set solver options
     solvers.options['show_progress'] = False
     #Initalize model parameter theta
@@ -70,10 +87,9 @@ def Solv(image, coords):
             theta = matrix(-1*np.ones(6),(6,1))
             f = np.inf        
     #if the result is a parbola set the energie to inf 
-    if (2*theta[2])**2-4*theta[0]*theta[1] >= -1e-10 and theta[0] != 0:
+    if 4*(theta[2])**2-4*theta[0]*theta[1] >= -1e-10 and theta[0] != 0:
         theta = matrix(-1*np.ones(6),(6,1))
         f = np.inf  
-
     return theta, f
 
 def segmented(image, theta, threshold):
