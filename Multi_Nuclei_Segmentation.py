@@ -7,6 +7,25 @@ from Single_nuclei_segmentation import Solv
 
 #create the subimages that will then be minimized
 def create_images(fragments, PrototypeList):
+    """
+    create a list of a list of coordinates. 
+    Each element contains coordinates of a subimage obtained by the 
+    labels of the corresponding element in PrototypeList. These labels match the labeled matrix fragments.
+
+    Input
+    -----
+    fragments: 2d-ndarray, a labeled matrix in the shape of an image.
+            Each label depicts a fragment of an image.
+
+    PrototypeList: list of frozensets
+        Each set contains labels corresponding to the labels in fragments. 
+
+    Result
+    ------
+    ListOfCoords: list of lists
+        each element is a list of int tuples (x, y) of pixel-coordinates of the corresponding image
+    """
+
     ListOfCoords = []
     for k in range(len(PrototypeList)):
         coords = np.concatenate([regionprops(fragments)[i-1].coords for i in list(PrototypeList[k])])
@@ -16,7 +35,7 @@ def create_images(fragments, PrototypeList):
 #minimize the prototype sets. uses parallelization
 def optimise_regions(image, ListOfCoords):
     """
-    Find all minimisers and minimum value of energy function for each region of image given by ListOfCoords.
+    Find all minimisers and minimum value of energy function J for each region of image given by ListOfCoords.
 
     Input
     -----
@@ -30,9 +49,11 @@ def optimise_regions(image, ListOfCoords):
     ------
     (theta, f)
         theta: list of CVX 6x1 matrix of length ListOfCoords
-            TODO
+            each element is the minimizer of energy function J for the subimage of the same index in ListOfCoords.
+            TODO explain what the elements of theta represent
         f: list of floats of length ListOfCoords
-            TODO
+            each element is the minimum of the energy function J for the subimage of the same index in ListOfCoords,
+            i.e the value J evaluted at point theta.
     """
     theta = []
     f = []
@@ -41,7 +62,24 @@ def optimise_regions(image, ListOfCoords):
     return theta, f
 
 #Alg II
-def global_solution(f,alpha,fragments,PrototypeList):
+def global_solution(f, alpha, fragments, PrototypeList):
+
+    """
+    Input
+    -----
+    f: list of floats of size n
+
+    alpha: float, default is np.median(f)
+
+    fragments: ndarray, a labeled matrix
+
+    PrototypeList: list of frozensets of length n
+
+    Return
+    ------
+    u: list of ones and zeros of length n
+    """
+
     #Set Variables we dont need Z but f_used
     n = len(PrototypeList) 
     u = np.zeros(n)
@@ -109,7 +147,26 @@ def global_solution(f,alpha,fragments,PrototypeList):
     return u
 
 #compute segmented picture
-def multi_segmentation(image, fragments, PrototypeList, f, alpha, theta):
+def multi_segmentation(image, fragments, PrototypeList, theta, f, alpha):
+    """
+    Input
+    -----
+    image: 2d-ndarray or matrix
+        Image for which we compute minimum energy
+
+    fragments: 2d-ndarray, a labeled matrix of the same type and shape as image.
+        Each label depicts a fragment of the input picture ``image``.
+
+    PrototypeList: list of frozensets of length n
+        Each set contains labels corresponding to the labels in fragments. 
+
+    f: list of floats of length n
+
+    Return
+    ------
+    ListOfContours: list of length n
+        
+    """
     u = global_solution(f, alpha, fragments, PrototypeList)
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords]),(len(coords),6))

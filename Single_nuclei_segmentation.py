@@ -115,5 +115,3 @@ def main(path_to_data):
     plt.imshow(segmentation)
     plt.colorbar()
     plt.show()
-
-
