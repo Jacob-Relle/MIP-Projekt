@@ -12,16 +12,18 @@ def create_images(fragments, PrototypeList):
     Each element contains coordinates of a subimage obtained by the 
     labels of the corresponding element in PrototypeList. These labels match the labeled matrix fragments.
 
-    Input
+    Inputs
     -----
+
     fragments: 2d-ndarray, a labeled matrix in the shape of an image.
             Each label depicts a fragment of an image.
 
     PrototypeList: list of frozensets
         Each set contains labels corresponding to the labels in fragments. 
 
-    Result
+    Returns
     ------
+
     ListOfCoords: list of lists
         each element is a list of int tuples (x, y) of pixel-coordinates of the corresponding image
     """
@@ -37,23 +39,24 @@ def optimise_regions(image, ListOfCoords):
     """
     Find all minimisers and minimum value of energy function J for each region of image given by ListOfCoords.
 
-    Input
+    Parameters
     -----
+
     image: 2d-ndarray or matrix
         Image for which we compute minimum energy
 
     ListOfCoords: list of lists
         each element is a list of int tuples (x, y) of pixel-coordinates in image
 
-    Result
+    Returns
     ------
-    (theta, f)
-        theta: list of CVX 6x1 matrix of length ListOfCoords
-            each element is the minimizer of energy function J for the subimage of the same index in ListOfCoords.
-            TODO explain what the elements of theta represent
-        f: list of floats of length ListOfCoords
-            each element is the minimum of the energy function J for the subimage of the same index in ListOfCoords,
-            i.e the value J evaluted at point theta.
+
+    theta: list of CVX 6x1 matrix of length ListOfCoords
+        each element is the minimizer of energy function J for the subimage of the same index in ListOfCoords.
+        TODO explain what the elements of theta represent
+    f: list of floats of length ListOfCoords
+        each element is the minimum of the energy function J for the subimage of the same index in ListOfCoords,
+        i.e the value J evaluted at point theta.
     """
     theta = []
     f = []
@@ -65,8 +68,9 @@ def optimise_regions(image, ListOfCoords):
 def global_solution(f, alpha, fragments, PrototypeList):
 
     """
-    Input
+    Parameters
     -----
+
     f: list of floats of size n
 
     alpha: float, default is np.median(f)
@@ -75,9 +79,11 @@ def global_solution(f, alpha, fragments, PrototypeList):
 
     PrototypeList: list of frozensets of length n
 
-    Return
+    Returns
     ------
-    u: list of ones and zeros of length n
+
+    u: ndarray 
+        Binary vector of length one.
     """
 
     #Set Variables we dont need Z but f_used
@@ -149,7 +155,7 @@ def global_solution(f, alpha, fragments, PrototypeList):
 #compute segmented picture
 def multi_segmentation(image, fragments, PrototypeList, theta, f, alpha):
     """
-    Input
+    Parameters
     -----
     image: 2d-ndarray or matrix
         Image for which we compute minimum energy
@@ -162,9 +168,10 @@ def multi_segmentation(image, fragments, PrototypeList, theta, f, alpha):
 
     f: list of floats of length n
 
-    Return
+    Returns
     ------
-    ListOfContours: list of length n
+    ListOfContours: list 
+        List of length n containing lists with the contour lines of the optimal segmentation
         
     """
     u = global_solution(f, alpha, fragments, PrototypeList)

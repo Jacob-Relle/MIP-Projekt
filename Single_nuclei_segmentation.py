@@ -56,19 +56,20 @@ def Solv(image, coords):
 
     Parameters
     ----------
+    
     image: 2d-ndarray or matrix
         Image for which we compute minimum energy
     coords: list of int tuples.
         Each element of coords is a tuple (x, y) of pixel-coordinates in image.
 
-    Return
+    Returns
     ------
-    (theta, f)
-        theta: a CVX 6x1 matrix of type double 
-            minimizer of the function J. 
+    
+    theta: a CVX 6x1 matrix of type double 
+        minimizer of the function J. 
         
-        f: float
-             value J takes at theta, and as such the minimum  
+    f: float
+        value J takes at theta, and as such the minimum  
     """
 
     #Set solver options
