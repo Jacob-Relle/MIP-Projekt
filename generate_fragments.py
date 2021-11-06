@@ -11,7 +11,7 @@ from skimage.future.graph import RAG
 
 from tqdm import tqdm
 
-def generate_fragments(img, std_dev, int_threshold, min_seed_dist, max_search_depth, max_frag_dist):
+def generate_fragments(img, std_dev, int_threshold, min_seed_dist, max_search_depth, max_frag_dist) -> tuple[np.ndarray, list[frozenset]]:
     """
     Create fragments and prototype set out of watershed transformation of image.
     
@@ -83,8 +83,8 @@ def generate_fragments(img, std_dev, int_threshold, min_seed_dist, max_search_de
         if np.linalg.norm(np.array(PI[edge[0]-1].centroid) - np.array(PI[edge[1]-1].centroid)) > max_frag_dist:
             G.remove_edge(edge[0],edge[1])
 
-    #initalize the Prototypeset
-    PrototypeSet = set()
+    #initalize the prototypeset
+    prototypes = set()
     #iterate over all conected components (cc)
     for nodes_in_cc in tqdm(nx.algorithms.connectivity.edge_kcomponents.k_edge_subgraphs(G,1)):
         #Set the subgraph of curent cc
@@ -92,8 +92,7 @@ def generate_fragments(img, std_dev, int_threshold, min_seed_dist, max_search_de
         #Loop over the nodes of the subgraph
         for v in nodes_in_cc:
             #Add the isolated region of the curent node if it is simply connected
-            if euler_number(fragments == v) == 1:
-                PrototypeSet.add(frozenset([v]))
+            if euler_number(fragments == v) == 1: prototypes.add(frozenset([v]))
             #Loop over the distance from the curent node within the graph
             for distance in range(1,max_search_depth+1):
                 #Get a dictonary containg the distance from curent node
@@ -104,14 +103,15 @@ def generate_fragments(img, std_dev, int_threshold, min_seed_dist, max_search_de
                     for node_subset in itertools.combinations([node for node in distance_from_origin.keys()], node_amount):
                         node_subset = set([v]).union(set(node_subset))
                         #Check other requirments and add the node set to S if they are fullfilled
-                        if frozenset(node_subset) not in PrototypeSet:
-                            if nx.is_connected(H.subgraph(node_subset)):
-                                #check that the merge of the regions is simply connected
-                                sub_img = np.zeros_like(fragments, dtype = bool)
-                                for region_label in node_subset:
-                                    sub_img += fragments == region_label
-                                if euler_number(sub_img) == 1:
-                                     PrototypeSet.add(frozenset(node_subset))
-    PrototypeList = list(PrototypeSet)
+                        if frozenset(node_subset) in prototypes:
+                            continue
+                        if not nx.is_connected(H.subgraph(node_subset)):
+                            continue
+                        #check that the merge of the regions is simply connected
+                        sub_img = np.zeros_like(fragments, dtype = bool)
+                        for region_label in node_subset:
+                            sub_img += fragments == region_label
+                        if euler_number(sub_img) == 1: prototypes.add(frozenset(node_subset))
+    prototype_list = list(prototypes)
 
-    return fragments, PrototypeList
+    return fragments, prototype_list

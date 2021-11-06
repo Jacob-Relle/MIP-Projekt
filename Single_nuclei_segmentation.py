@@ -69,7 +69,13 @@ def Solv(image, coords):
         minimizer of the function J. 
         
     f: float
-        value J takes at theta, and as such the minimum  
+        value J takes at theta, and as such the minimum
+
+    Notes
+    -----
+    theta is a 6x1 matrix and to be understood as follows:
+    .. math:: X(e^{j\omega } ) = x(n)e^{ - j\omega n}
+
     """
 
     #Set solver options
