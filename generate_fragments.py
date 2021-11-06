@@ -38,7 +38,7 @@ def generate_fragments(img, std_dev, int_threshold, min_seed_dist, max_search_de
     
     Returns
     -------
-    
+
     fragments: 2d-ndarray
         a integer labeled matrix of the same shape as image.
         Each label depicts a fragment of the input picture ``img``.
