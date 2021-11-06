@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from skimage import filters
+from skimage.measure import find_contours
 from cvxopt import solvers, matrix, spmatrix, div, exp, mul, log
 
 def J_energy(image, coords):
@@ -99,19 +100,16 @@ def Solv(image, coords):
         f = np.inf  
     return theta, f
 
-def segmented(image, theta, threshold):
+def segmented(image, theta):
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords])
                      ,(len(coords),6))
     s = delta_s * theta
     s = np.reshape(s,image.shape)
-    s = s*(s-threshold)
-    image = image[...,np.newaxis]
-    image = np.concatenate((image,image,image),axis=2)
-    image[...,0][s<=0] = 0
-    image[...,1][s<=0] = 1
-    image[...,2][s<=0] = 0
-    return image
+    s[s < 0] = -1
+    s[s > 0] = 1
+
+    return find_contours(s)
 
 def main(path_to_data):
 
