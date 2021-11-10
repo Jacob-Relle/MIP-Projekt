@@ -195,9 +195,9 @@ def multi_segmentation(image, fragments: np.ndarray, prototype_list: list[frozen
     contours_list = []
     for k in range(len(u)):
         if u[k]==1:
-            prototype_list = delta_s * theta[k]
-            prototype_list = np.reshape(prototype_list,image.shape)
-            prototype_list[prototype_list>0]=  1
-            prototype_list[prototype_list<0]= -1
-            contours_list.append(find_contours(prototype_list))
+            s = delta_s * theta[k]
+            s = np.reshape(s,image.shape)
+            s[s>0]=  1
+            s[s<0]= -1
+            contours_list.append(find_contours(s))
     return contours_list
