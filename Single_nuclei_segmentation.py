@@ -1,3 +1,4 @@
+import cvxopt
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -51,9 +52,9 @@ def J_energy(image, coords):
     solv = solvers.cp(F)
     return solv['x'], solv['primal objective']
 
-def Solv(image, coords):
+def Solv(image, coords) -> cvxopt.matrix:
     """
-    Minimize the energy ENTER FUNCTION of image for region defined by coords.
+    Minimize the energy of image for region defined by coords.
 
     Parameters
     ----------
@@ -100,7 +101,21 @@ def Solv(image, coords):
         f = np.inf  
     return theta, f
 
-def segmented(image, theta):
+def segmented(image, theta) -> list[np.ndarray]:
+    """
+    Compute the model functions for given optimal parameters theta.
+
+    Input
+    -----
+    image: 2d-ndarray or matrix
+        Image of nuclei to be fitted as ellipse
+    theta: a CVX 6x1 matrix of type double 
+        minimizer of the energy function J.
+
+    Return
+    ------
+    list[ndarray]: ellipse contour of the fitted nuclei
+    """
     coords = [(x[0], x[1]) for x in np.ndindex(image.shape)]
     delta_s = matrix(np.array([[x[0]**2, x[1]**2, 2*x[0]*x[1], x[0], x[1], 1] for x in coords])
                      ,(len(coords),6))
